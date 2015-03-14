@@ -191,12 +191,12 @@ public class APDUGenerator {
         try {
             System.out.println("Enter PIN :");
             Scanner scanner = new Scanner(System.in);
-            int choice = scanner.nextInt();
+            BigInteger choice = scanner.nextBigInteger();
             
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_OWNER_PIN, (byte) 0,
-                    (byte) 0, choice);
+                    (byte) 0, choice.toByteArray());
             System.out.println("APDU for setting Owner Pin :");
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -209,12 +209,12 @@ public class APDUGenerator {
         try {
             System.out.println("Enter PIN :");
             Scanner scanner = new Scanner(System.in);
-            int choice = scanner.nextInt();
+            BigInteger choice = scanner.nextBigInteger();
             
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_VERIFICATION, (byte) 0,
-                    (byte) 0, choice);
+                    (byte) 0, choice.toByteArray());
             System.out.println("APDU for Pin verification :");
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -227,13 +227,13 @@ public class APDUGenerator {
         try {
             System.out.println("Enter how many to credit :");
             Scanner scanner = new Scanner(System.in);
-            int choice = scanner.nextInt();           
+            BigInteger choice = scanner.nextBigInteger();
             
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_CREDIT, (byte) 0,
-                    (byte) 0, choice);
-            System.out.println("APDU for Credit Op. :");
+                    (byte) 0, choice.toByteArray());
+            System.out.println("APDU for Credit Op. :"+capdu.getData().length);
             System.out.println(byteToStr(capdu.getBytes()));
             
         } catch (Exception ex) {
@@ -245,12 +245,12 @@ public class APDUGenerator {
         try {
             System.out.println("Enter how many to debit :");
             Scanner scanner = new Scanner(System.in);
-            int choice = scanner.nextInt();           
+            BigInteger choice = scanner.nextBigInteger();           
             
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_DEBIT, (byte) 0,
-                    (byte) 0, choice);
+                    (byte) 0, choice.toByteArray());
             System.out.println("APDU for Debit Op. :");
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -263,7 +263,7 @@ public class APDUGenerator {
         try {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_BALANCE, (byte) 0,
-                    (byte) 0, 0);
+                    (byte) 0, (byte) 0);
             System.out.println("APDU for Balance Op. :");
             System.out.println(byteToStr(capdu.getBytes()));
             
