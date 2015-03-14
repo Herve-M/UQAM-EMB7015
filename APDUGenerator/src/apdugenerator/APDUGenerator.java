@@ -110,21 +110,6 @@ public class APDUGenerator {
     }
 
     /**
-     * Convert BigInt to Byte[]
-     * @param big
-     * @return 
-     */
-    byte[] getBytes(BigInteger big) {
-        byte[] data = big.toByteArray();
-        if (data[0] == 0) {
-            byte[] tmp = data;
-            data = new byte[tmp.length - 1];
-            System.arraycopy(tmp, 1, data, 0, tmp.length - 1);
-        }
-        return data;
-    }
-
-    /**
      * Make a displayable byte[]
      * @param in
      * @return 
@@ -144,7 +129,7 @@ public class APDUGenerator {
             KeyFactory factory = KeyFactory.getInstance("RSA");
             RSAPublicKey key = (RSAPublicKey) factory.generatePublic(spec);
 
-            byte[] modulus = getBytes(key.getModulus());
+            byte[] modulus = key.getModulus().toByteArray();
 
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PUBLIC_MODULUS, (byte) 0,
@@ -152,7 +137,7 @@ public class APDUGenerator {
             System.out.println("APDU for setting Public Key Modulus :");
             System.out.println(byteToStr(capdu.getBytes()));
 
-            byte[] exponent = getBytes(key.getPublicExponent());
+            byte[] exponent = key.getPublicExponent().toByteArray();
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PUBLIC_EXP, (byte) 0,
                     (byte) 0, exponent);
             System.out.println("APDU for setting Public Key Exp :");
@@ -170,14 +155,14 @@ public class APDUGenerator {
             RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);
             
             
-            byte[] modulus = getBytes(key.getModulus());
+            byte[] modulus = key.getModulus().toByteArray();
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PRIVATE_MODULUS, (byte) 0,
                     (byte) 0, modulus);
             System.out.println("APDU for setting Private Key Modulus :");
             System.out.println(byteToStr(capdu.getBytes()));
             
-            byte[] exponent = getBytes(key.getPrivateExponent());
+            byte[] exponent = key.getPrivateExponent().toByteArray();
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PRIVATE_EXP, (byte) 0,
 					(byte) 0, exponent);
             System.out.println("APDU for setting Private Key Exp :");
