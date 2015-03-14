@@ -120,19 +120,18 @@ public class CryptedBankCard extends Applet {
 
         switch (state) {
             case STATE_INIT:
-                short lc = (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF);
                 switch (ins) {
                     case INS_SET_PUBLIC_MODULUS:
-                        insSetPublicModulus(apdu, lc);
+                        insSetPublicModulus(apdu);
                         break;
                     case INS_SET_PRIVATE_MODULUS:
-                        insSetPrivateModulus(apdu, lc);
+                        insSetPrivateModulus(apdu);
                         break;
                     case INS_SET_PUBLIC_EXP:
-                        insSetPublicExp(apdu, lc);
+                        insSetPublicExp(apdu);
                         break;
                     case INS_SET_PRIVATE_EXP:
-                        insSetPrivateExp(apdu, lc);
+                        insSetPrivateExp(apdu);
                         break;
                     case INS_SET_OWNER_PIN:
                         insSetOwnerPin(apdu);
@@ -292,7 +291,7 @@ public class CryptedBankCard extends Applet {
      * @param apdu
      * @param lc 
      */
-    void insSetPublicModulus(APDU apdu, short lc){
+    void insSetPublicModulus(APDU apdu){
         byte[] buffer = apdu.getBuffer();
         try {
             JCSystem.beginTransaction();
@@ -307,7 +306,7 @@ public class CryptedBankCard extends Applet {
     * @param apdu
     * @param lc 
     */
-    void insSetPrivateModulus(APDU apdu, short lc){
+    void insSetPrivateModulus(APDU apdu){
         byte[] buffer = apdu.getBuffer();
         try{
             JCSystem.beginTransaction();
@@ -324,7 +323,7 @@ public class CryptedBankCard extends Applet {
      * @param apdu
      * @param lc 
      */
-    void insSetPrivateExp(APDU apdu, short lc){
+    void insSetPrivateExp(APDU apdu){
         byte[] buffer = apdu.getBuffer();
         try{
             JCSystem.beginTransaction();
@@ -341,7 +340,7 @@ public class CryptedBankCard extends Applet {
      * @param apdu
      * @param lc 
      */
-    void insSetPublicExp(APDU apdu, short lc){
+    void insSetPublicExp(APDU apdu){
         byte[] buffer = apdu.getBuffer();
         try{
             JCSystem.beginTransaction();
