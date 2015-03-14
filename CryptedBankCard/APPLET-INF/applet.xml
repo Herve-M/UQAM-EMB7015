@@ -1,0 +1,10 @@
+<applet-app xmlns="http://java.sun.com/xml/ns/javacard" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="3.0" xsi:schemaLocation="http://java.sun.com/xml/ns/javacard http://java.sun.com/xml/ns/javacard/applet-app_3_0.xsd">
+    <applet>
+        <!-- The applet application deployment descriptor conveys APDU-based application
+        model elements and configuration information of an application between application
+        developers, application assemblers, and deployers. -->
+        <display-name>Crypted Bank Card</display-name>
+        <applet-class>cbc.CryptedBankCard</applet-class>
+        <applet-AID>//aid/C35E4F1437/6B</applet-AID>
+    </applet>
+</applet-app>
