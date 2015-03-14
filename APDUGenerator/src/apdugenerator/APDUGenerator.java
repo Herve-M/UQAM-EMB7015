@@ -12,6 +12,7 @@ import java.security.interfaces.*;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.Cipher;
 
 import javax.smartcardio.*;
 
@@ -45,6 +46,18 @@ public class APDUGenerator {
     static final byte INS_CREDIT = (byte) 0x20;
     static final byte INS_DEBIT = (byte) 0x30;
     static final byte INS_BALANCE = (byte) 0x40;
+    
+    ////Crypt
+    static final String ALGORITHM = "RSA";
+    static final String TERMINAL_PUBLIC_KEY_FILE ="term-public.key";
+    static final String TERMINAL_PRIVATE_KEY_FILE ="term-private.key";
+    static final String CARD_PUBLIC_KEY_FILE ="card-public.key";
+    static final String CARD_PRIVATE_KEY_FILE ="card-private.key";
+    RSAPublicKey rSAPublicKey;
+    
+    ////OTHER
+    public boolean EXIT = false;
+    
 
     /**
      * Generate a Private/Public key pair
@@ -52,23 +65,42 @@ public class APDUGenerator {
     private void generateKeyPair() {
         try {
             System.out.println("Generating keys...");
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            KeyPairGenerator generator = KeyPairGenerator.getInstance(ALGORITHM);
             generator.initialize(512);
             KeyPair keypair = generator.generateKeyPair();
-            RSAPublicKey publicKey = (RSAPublicKey) keypair.getPublic();
-            RSAPrivateKey privateKey = (RSAPrivateKey) keypair.getPrivate();
+            RSAPublicKey cardPublicKey = (RSAPublicKey) keypair.getPublic();
+            RSAPrivateKey cardPrivateKey = (RSAPrivateKey) keypair.getPrivate();
+            keypair = generator.generateKeyPair();
+            RSAPublicKey termPublicKey = (RSAPublicKey) keypair.getPublic();
+            RSAPrivateKey termPrivateKey = (RSAPrivateKey) keypair.getPrivate();
 
-            FileOutputStream publicKeyFile = new FileOutputStream("public.key");
-            publicKeyFile.write(publicKey.getEncoded());
+            FileOutputStream publicKeyFile = new FileOutputStream(CARD_PUBLIC_KEY_FILE);
+            publicKeyFile.write(cardPublicKey.getEncoded());
             publicKeyFile.close();
 
-            FileOutputStream privateKeyFile = new FileOutputStream("private.key");
-            privateKeyFile.write(privateKey.getEncoded());
+            FileOutputStream privateKeyFile = new FileOutputStream(CARD_PRIVATE_KEY_FILE);
+            privateKeyFile.write(cardPrivateKey.getEncoded());
             privateKeyFile.close();
+            
+            FileOutputStream termPublicKeyFile = new FileOutputStream(TERMINAL_PUBLIC_KEY_FILE);
+            termPublicKeyFile.write(termPublicKey.getEncoded());
+            termPublicKeyFile.close();
 
-            System.out.println("Modulus = " + publicKey.getModulus());
-            System.out.println("Public Exp = " + publicKey.getPublicExponent());
-            System.out.println("Private Exp = " + privateKey.getPrivateExponent());
+            FileOutputStream termPrivateKeyFile = new FileOutputStream(TERMINAL_PRIVATE_KEY_FILE);
+            termPrivateKeyFile.write(termPrivateKey.getEncoded());
+            termPrivateKeyFile.close();
+            
+            System.out.println("Card KeyPair info. : ");
+            System.out.println("Modulus = " + cardPublicKey.getModulus());
+            System.out.println("Public Exp = " + cardPublicKey.getPublicExponent());
+            System.out.println("Private Exp = " + cardPrivateKey.getPrivateExponent());
+            
+            System.out.println("Terminal KeyPair info. : ");
+            System.out.println("Modulus = " + termPublicKey.getModulus());
+            System.out.println("Public Exp = " + termPublicKey.getPublicExponent());
+            System.out.println("Private Exp = " + termPrivateKey.getPrivateExponent());
+            
+            this.loadKey();
 
         } catch (Exception ex) {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
@@ -108,13 +140,28 @@ public class APDUGenerator {
         }
         return null;
     }
+    
+    /**
+     * Load Public Card key
+     */
+    public void loadKey(){
+        try {
+            byte[] data = loadFile(CARD_PUBLIC_KEY_FILE);
+            X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
+            KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+            rSAPublicKey = (RSAPublicKey) factory.generatePublic(spec);
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     /**
      * Make a displayable byte[]
      * @param in
      * @return 
      */
-    String byteToStr(byte[] in) {
+    private String byteToStr(byte[] in) {
         StringBuilder out = new StringBuilder();
         for (byte b : in) {
             out.append("0x"+String.format("%02X ", b));
@@ -122,11 +169,11 @@ public class APDUGenerator {
         return out.toString();
     }
 
-    public void setPublicKey() {
+    private void setPublicKey() {
         try {
-            byte[] data = loadFile("public.key");
+            byte[] data = loadFile(TERMINAL_PUBLIC_KEY_FILE);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
-            KeyFactory factory = KeyFactory.getInstance("RSA");
+            KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
             RSAPublicKey key = (RSAPublicKey) factory.generatePublic(spec);
 
             byte[] modulus = key.getModulus().toByteArray();
@@ -147,13 +194,12 @@ public class APDUGenerator {
         }
     }
     
-    public void setPrivateKey(){
+    private void setPrivateKey(){
         try{
-            byte[] data = loadFile("private.key");
+            byte[] data = loadFile(CARD_PRIVATE_KEY_FILE);
             PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
-            KeyFactory factory = KeyFactory.getInstance("RSA");
-            RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);
-            
+            KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+            RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);            
             
             byte[] modulus = key.getModulus().toByteArray();
             CommandAPDU capdu;
@@ -172,7 +218,7 @@ public class APDUGenerator {
         }
     }
     
-    public void setOwnerPin(){
+    private void setOwnerPin(){
         try {
             System.out.println("Enter PIN :");
             Scanner scanner = new Scanner(System.in);
@@ -181,8 +227,8 @@ public class APDUGenerator {
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_OWNER_PIN, (byte) 0,
-                    (byte) 0, choice.toByteArray());
-            System.out.println("APDU for setting Owner Pin :");
+                    (byte) 0, crypt(choice.toByteArray()));
+            System.out.println("C APDU for setting Owner Pin :");
             System.out.println(byteToStr(capdu.getBytes()));
             
         } catch (Exception ex) {
@@ -190,7 +236,7 @@ public class APDUGenerator {
         }
     }
     
-    public void verifyPin(){
+    private void verifyPin(){
         try {
             System.out.println("Enter PIN :");
             Scanner scanner = new Scanner(System.in);
@@ -199,7 +245,7 @@ public class APDUGenerator {
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_VERIFICATION, (byte) 0,
-                    (byte) 0, choice.toByteArray());
+                    (byte) 0, crypt(choice.toByteArray()));
             System.out.println("APDU for Pin verification :");
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -208,7 +254,7 @@ public class APDUGenerator {
         }
     }
     
-    public void getCreditApdu(){
+    private void getCreditApdu(){
         try {
             System.out.println("Enter how many to credit :");
             Scanner scanner = new Scanner(System.in);
@@ -217,7 +263,7 @@ public class APDUGenerator {
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_CREDIT, (byte) 0,
-                    (byte) 0, choice.toByteArray());
+                    (byte) 0, crypt(choice.toByteArray()));
             System.out.println("APDU for Credit Op. :"+capdu.getData().length);
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -226,7 +272,7 @@ public class APDUGenerator {
         }
     }
     
-    public void getDebitApdu(){
+    private void getDebitApdu(){
         try {
             System.out.println("Enter how many to debit :");
             Scanner scanner = new Scanner(System.in);
@@ -235,7 +281,7 @@ public class APDUGenerator {
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_DEBIT, (byte) 0,
-                    (byte) 0, choice.toByteArray());
+                    (byte) 0, crypt(choice.toByteArray()));
             System.out.println("APDU for Debit Op. :");
             System.out.println(byteToStr(capdu.getBytes()));
             
@@ -244,7 +290,7 @@ public class APDUGenerator {
         }
     }
     
-    public void getBalanceApdu(){
+    private void getBalanceApdu(){
         try {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_BALANCE, (byte) 0,
@@ -256,7 +302,37 @@ public class APDUGenerator {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-   
+    
+    /**
+     * Crypt a set of Data with CardPublicKey
+     * @param data
+     * @return 
+     */
+    private byte[] crypt(byte[] data){
+        byte[] cipherData = null;
+        try {
+            final Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.ENCRYPT_MODE, rSAPublicKey);
+            cipherData = cipher.doFinal(data);
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return cipherData;
+    }
+    
+    //Just for info
+//    private byte[] decrypt(byte[] data){
+//        byte[] cipherData = null;
+//        try {
+//            final Cipher cipher = Cipher.getInstance(ALGORITHM);
+//            cipher.init(Cipher.DECRYPT_MODE, rSAPrivateKey);
+//            cipherData = cipher.doFinal(data);
+//        } catch (Exception ex) {
+//            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return cipherData;
+//    }    
+    
     public void printMenu(){
         System.out.println("Select one option :");
         System.out.println("1 - Generate KeyPair");
@@ -296,6 +372,7 @@ public class APDUGenerator {
                 this.getBalanceApdu();
                 return;
             case 9:
+                this.EXIT = true;
                 return;
             default:
                 this.printMenu();
@@ -307,7 +384,10 @@ public class APDUGenerator {
      */
     public static void main(String[] args) {
         APDUGenerator apdug = new APDUGenerator();
-        apdug.printMenu();
+        apdug.loadKey();
+        while (!apdug.EXIT) {            
+            apdug.printMenu();
+        }        
     }
 
 }
