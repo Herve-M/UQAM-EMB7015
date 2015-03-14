@@ -186,13 +186,103 @@ public class APDUGenerator {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+    public void setOwnerPin(){
+        try {
+            System.out.println("Enter PIN :");
+            Scanner scanner = new Scanner(System.in);
+            int choice = scanner.nextInt();
+            
+            //TODO: add test ? <=4
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_SET_OWNER_PIN, (byte) 0,
+                    (byte) 0, choice);
+            System.out.println("APDU for setting Owner Pin :");
+            System.out.println(byteToStr(capdu.getBytes()));
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void verifyPin(){
+        try {
+            System.out.println("Enter PIN :");
+            Scanner scanner = new Scanner(System.in);
+            int choice = scanner.nextInt();
+            
+            //TODO: add test ? <=4
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_VERIFICATION, (byte) 0,
+                    (byte) 0, choice);
+            System.out.println("APDU for Pin verification :");
+            System.out.println(byteToStr(capdu.getBytes()));
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void getCreditApdu(){
+        try {
+            System.out.println("Enter how many to credit :");
+            Scanner scanner = new Scanner(System.in);
+            int choice = scanner.nextInt();           
+            
+            //TODO: add test ? <=4
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_CREDIT, (byte) 0,
+                    (byte) 0, choice);
+            System.out.println("APDU for Credit Op. :");
+            System.out.println(byteToStr(capdu.getBytes()));
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void getDebitApdu(){
+        try {
+            System.out.println("Enter how many to debit :");
+            Scanner scanner = new Scanner(System.in);
+            int choice = scanner.nextInt();           
+            
+            //TODO: add test ? <=4
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_DEBIT, (byte) 0,
+                    (byte) 0, choice);
+            System.out.println("APDU for Debit Op. :");
+            System.out.println(byteToStr(capdu.getBytes()));
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public void getBalanceApdu(){
+        try {
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_BALANCE, (byte) 0,
+                    (byte) 0, 0);
+            System.out.println("APDU for Balance Op. :");
+            System.out.println(byteToStr(capdu.getBytes()));
+            
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
    
     public void printMenu(){
-        System.out.println("Select one5 option :");
+        System.out.println("Select one option :");
         System.out.println("1 - Generate KeyPair");
         System.out.println("2 - Get Private Key APDU");
         System.out.println("3 - Get Public Key APDU");
-        System.out.println("4 - Quit");
+        System.out.println("4 - Get PIN APDU");
+        System.out.println("5 - Get PIN Verification APDU");
+        System.out.println("6 - Get Credit APDU");
+        System.out.println("7 - Get Debit APDU");
+        System.out.println("8 - Get Balance APDU");
+        System.out.println("9 - Quit");
         Scanner scanner = new Scanner(System.in);
         int choice = scanner.nextInt();
         switch (choice) {
@@ -206,6 +296,21 @@ public class APDUGenerator {
                 this.setPublicKey();
                 break;
             case 4:
+                this.setOwnerPin();
+                return;
+            case 5:
+                this.verifyPin();
+                return;
+            case 6:
+                this.getCreditApdu();
+                return;
+            case 7:
+                this.getDebitApdu();
+                return;
+            case 8:
+                this.getBalanceApdu();
+                return;
+            case 9:
                 return;
             default:
                 this.printMenu();
