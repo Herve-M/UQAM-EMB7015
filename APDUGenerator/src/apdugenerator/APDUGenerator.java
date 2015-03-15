@@ -9,6 +9,7 @@ import java.math.BigInteger;
 import java.security.*;
 import java.security.spec.*;
 import java.security.interfaces.*;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -175,12 +176,17 @@ public class APDUGenerator {
             X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
             KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
             RSAPublicKey key = (RSAPublicKey) factory.generatePublic(spec);
-
-            byte[] modulus = key.getModulus().toByteArray();
+            
+            byte[] signedModulus = key.getModulus().toByteArray();
+            byte[] unsignedModulus = new byte[signedModulus.length - 1];
+            
+            if(signedModulus[0] == (byte)0x00){
+                 System.arraycopy(signedModulus, 1, unsignedModulus, 0, unsignedModulus.length);
+            }
 
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PUBLIC_MODULUS, (byte) 0,
-                    (byte) 0, modulus);
+                    (byte) 0, unsignedModulus);
             System.out.println("APDU for setting Public Key Modulus :");
             System.out.println(byteToStr(capdu.getBytes()));
 
@@ -199,13 +205,19 @@ public class APDUGenerator {
             byte[] data = loadFile(CARD_PRIVATE_KEY_FILE);
             PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
             KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
-            RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);            
+            RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);
             
-            byte[] modulus = key.getModulus().toByteArray();
+            byte[] signedModulus = key.getModulus().toByteArray();
+            byte[] unsignedModulus = new byte[signedModulus.length - 1];
+            
+            if(signedModulus[0] == (byte)0x00){
+                 System.arraycopy(signedModulus, 1, unsignedModulus, 0, unsignedModulus.length);
+            }
+            
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_PRIVATE_MODULUS, (byte) 0,
-                    (byte) 0, modulus);
-            System.out.println("APDU for setting Private Key Modulus :");
+                    (byte) 0, unsignedModulus);
+            System.out.println("APDU for setting Private Key Modulus ["+unsignedModulus.length+"] :");
             System.out.println(byteToStr(capdu.getBytes()));
             
             byte[] exponent = key.getPrivateExponent().toByteArray();
@@ -227,8 +239,8 @@ public class APDUGenerator {
             //TODO: add test ? <=4
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SET_OWNER_PIN, (byte) 0,
-                    (byte) 0, crypt(choice.toByteArray()));
-            System.out.println("C APDU for setting Owner Pin :");
+                    (byte) 0, choice.toByteArray());
+            System.out.println("APDU for setting Owner Pin :");
             System.out.println(byteToStr(capdu.getBytes()));
             
         } catch (Exception ex) {
@@ -246,7 +258,7 @@ public class APDUGenerator {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_VERIFICATION, (byte) 0,
                     (byte) 0, crypt(choice.toByteArray()));
-            System.out.println("APDU for Pin verification :");
+            System.out.println("APDU for Pin verification ["+capdu.getData().length+"]:");
             System.out.println(byteToStr(capdu.getBytes()));
             
         } catch (Exception ex) {
@@ -324,8 +336,13 @@ public class APDUGenerator {
 //    private byte[] decrypt(byte[] data){
 //        byte[] cipherData = null;
 //        try {
+//            byte[] dataF = loadFile(CARD_PRIVATE_KEY_FILE);
+//            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(dataF);
+//            KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+//            RSAPrivateKey key = (RSAPrivateKey) factory.generatePrivate(spec);        
+//            
 //            final Cipher cipher = Cipher.getInstance(ALGORITHM);
-//            cipher.init(Cipher.DECRYPT_MODE, rSAPrivateKey);
+//            cipher.init(Cipher.DECRYPT_MODE, key);
 //            cipherData = cipher.doFinal(data);
 //        } catch (Exception ex) {
 //            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
