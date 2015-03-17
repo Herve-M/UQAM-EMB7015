@@ -67,7 +67,7 @@ public class APDUGenerator {
         try {
             System.out.println("Generating keys...");
             KeyPairGenerator generator = KeyPairGenerator.getInstance(ALGORITHM);
-            generator.initialize(512);
+            generator.initialize(1024);
             KeyPair keypair = generator.generateKeyPair();
             RSAPublicKey cardPublicKey = (RSAPublicKey) keypair.getPublic();
             RSAPrivateKey cardPrivateKey = (RSAPrivateKey) keypair.getPrivate();

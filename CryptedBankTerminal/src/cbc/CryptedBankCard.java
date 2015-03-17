@@ -186,11 +186,15 @@ public class CryptedBankCard extends Applet {
         byte[] buffer = apdu.getBuffer();
         short outBuffSize = 0;
 
-        apdu.setOutgoing();  
-        Util.setShort(buffer, (short) 0, balance);
+        apdu.setOutgoing();
         
-//        cipher.init(publicKey, Cipher.MODE_ENCRYPT);
-//        outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA, (byte)2,buffer, (short)0);
+        Util.setShort(buffer, (short) 0, balance);
+//        try {
+//            cipher.init(publicKey, Cipher.MODE_ENCRYPT);
+//            outBuffSize = cipher.doFinal(buffer,(short) 0, (byte)2,buffer, (short) 0);
+//        } catch(CryptoException ex){
+//            ISOException.throwIt((short)(0x9100 + ex.getReason()));
+//        }        
         
         apdu.setOutgoingLength(outBuffSize);        
         apdu.sendBytes((short) 0, outBuffSize);
@@ -207,29 +211,28 @@ public class CryptedBankCard extends Applet {
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
         short outBuffSize = 0;
         
+//        if ((numBytes != 1) || (byteRead != 1)) {
+//            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+//        }
+        
         try {
             cipher.init(privateKey, Cipher.MODE_DECRYPT);
-            outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,numBytes,tmp,(short)0);
+            outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,(short)(buffer[ISO7816.OFFSET_LC] & 0x0FF),tmp,(short)0);
 
+//            byte creditAmount = buffer[ISO7816.OFFSET_CDATA];
             byte creditAmount = tmp[0];
-            
-            if(tmp.length > 0){
-                if ((creditAmount > MAX_TRANSACTION_AMOUNT) || (creditAmount < 0)) {
-                    ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
-                }
 
-                if ((short) (balance + creditAmount) > MAX_BALANCE) {
-                    ISOException.throwIt(SW_EXCEED_MAXIMUM_BALANCE);
-                }
+            if ((creditAmount > MAX_TRANSACTION_AMOUNT) || (creditAmount < 0)) {
+                ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
+            }
 
-                JCSystem.beginTransaction();
-                balance = (short) (balance + creditAmount);
-                JCSystem.commitTransaction();
+            if ((short) (balance + creditAmount) > MAX_BALANCE) {
+                ISOException.throwIt(SW_EXCEED_MAXIMUM_BALANCE);
             }
-            else {
-                ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-            }
-            
+
+            JCSystem.beginTransaction();
+            balance = (short) (balance + creditAmount);
+            JCSystem.commitTransaction();
         } catch(CryptoException ex){
             JCSystem.abortTransaction();
             ISOException.throwIt((short)(0x9100 + ex.getReason()));
@@ -248,36 +251,27 @@ public class CryptedBankCard extends Applet {
         byte[] buffer = apdu.getBuffer();
         byte numBytes = (byte)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
-        short outBuffSize = 0;   
+        short outBuffSize = 0;
+
+//        if ((numBytes != 1) || (byteRead != 1)) {
+//            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+//        }       
         
-        try {
-            cipher.init(privateKey, Cipher.MODE_DECRYPT);
-            outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,numBytes,tmp,(short)0);
+        cipher.init(privateKey, Cipher.MODE_DECRYPT);
+        outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,(short)(buffer[ISO7816.OFFSET_LC] & 0x0FF),tmp,(short)0);
+        
+        byte debitAmount = tmp[0];
 
-            if(tmp.length > 0) {
-                byte debitAmount = tmp[0];
-
-                if ((debitAmount > MAX_TRANSACTION_AMOUNT) || (debitAmount < 0)) {
-                    ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
-                }
-
-                if ((short) (balance - debitAmount) < (short) 0) {
-                    ISOException.throwIt(SW_NEGATIVE_BALANCE);
-                }
-                JCSystem.beginTransaction();
-                balance = (short) (balance - debitAmount);
-                JCSystem.commitTransaction();
-            }
-            else {
-                ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
-            }
-        } catch(CryptoException ex){
-            JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
+        if ((debitAmount > MAX_TRANSACTION_AMOUNT) || (debitAmount < 0)) {
+            ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
         }
-        catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
-        }        
+
+        if ((short) (balance - debitAmount) < (short) 0) {
+            ISOException.throwIt(SW_NEGATIVE_BALANCE);
+        }
+        JCSystem.beginTransaction();
+        balance = (short) (balance - debitAmount);
+        JCSystem.commitTransaction();
     }
 
     /**
@@ -290,17 +284,13 @@ public class CryptedBankCard extends Applet {
         short outBuffSize = 0;
         
         if(privateKey.isInitialized()){
-             try{
+            try{
                 cipher.init(privateKey, Cipher.MODE_DECRYPT);
                 outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,(short)(buffer[ISO7816.OFFSET_LC] & 0x0FF),tmp,(short)0);
             }
             catch(CryptoException ex){
                 ISOException.throwIt((short)(0x9100 + ex.getReason()));
             }
-        }
-        
-        if(tmp.length > 0){
-            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
               
         if (ownerPIN.check(tmp, (short)0, (byte) outBuffSize) == false) {
