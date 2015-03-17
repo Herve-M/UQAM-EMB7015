@@ -203,17 +203,16 @@ public class CryptedBankCard extends Applet {
      */
     private void insCredit(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        byte numBytes = (byte)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
+        short numBytes = (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
         short outBuffSize = 0;
         
         try {
             cipher.init(privateKey, Cipher.MODE_DECRYPT);
             outBuffSize = cipher.doFinal(buffer,ISO7816.OFFSET_CDATA,numBytes,tmp,(short)0);
-
-            byte creditAmount = tmp[0];
-            
+ 
             if(tmp.length > 0){
+                byte creditAmount = tmp[0];
                 if ((creditAmount > MAX_TRANSACTION_AMOUNT) || (creditAmount < 0)) {
                     ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
                 }
@@ -246,7 +245,7 @@ public class CryptedBankCard extends Applet {
      */
     private void insDebit(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        byte numBytes = (byte)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
+        short numBytes = (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
         short outBuffSize = 0;   
         
@@ -299,7 +298,7 @@ public class CryptedBankCard extends Applet {
             }
         }
         
-        if(tmp.length > 0){
+        if(tmp.length <= 0){
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
               
