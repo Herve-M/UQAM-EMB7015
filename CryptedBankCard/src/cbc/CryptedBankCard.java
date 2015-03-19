@@ -1,7 +1,6 @@
 package cbc;
 
 import javacard.framework.APDU;
-import javacard.framework.APDUException;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
@@ -54,7 +53,7 @@ public class CryptedBankCard extends Applet {
     final static short SW_INVALID_TRANSACTION_AMOUNT = 0x6A83;
     final static short SW_EXCEED_MAXIMUM_BALANCE = 0x6A84;
     final static short SW_NEGATIVE_BALANCE = 0x6A85;
-    
+
     final static short SW_PULBIC_KEY_FAILED = 0x6201;
     final static short SW_PRIVATE_KEY_FAILED = 0x6202;
     final static short SW_SESSION_KEY_FAILED = 0x6302;
@@ -122,7 +121,7 @@ public class CryptedBankCard extends Applet {
         //Applet State
         state = STATE_INIT;
         //TMP
-        tmp = JCSystem.makeTransientByteArray((short) 256, JCSystem.CLEAR_ON_RESET);
+        tmp = JCSystem.makeTransientByteArray((short) 256, JCSystem.CLEAR_ON_DESELECT);
         //register
         register();
     }
@@ -185,11 +184,9 @@ public class CryptedBankCard extends Applet {
             case STATE_ISSUED: {
                 if (ins == INS_VERIFICATION) {
                     insVerification(apdu);
-                }
-                else if(ins == INS_SESSION_INIT){
+                } else if (ins == INS_SESSION_INIT) {
                     insSessionInit(apdu);
-                }
-                else {
+                } else {
                     if (!ownerPIN.isValidated()) {
                         ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
                     }
@@ -226,10 +223,10 @@ public class CryptedBankCard extends Applet {
         byte[] buffer = apdu.getBuffer();
         short outCryptBuffSize = 0;
 
-        Util.setShort(tmp, (short)0, balance);
-        
+        Util.setShort(tmp, (short) 0, balance);
+
         cipherDES.init(desKey, Cipher.MODE_ENCRYPT);
-        outCryptBuffSize = cipherDES.doFinal(tmp, (short) 0, (short)2, buffer, ISO7816.OFFSET_CDATA);
+        outCryptBuffSize = cipherDES.doFinal(tmp, (short) 0, (short) 2, buffer, ISO7816.OFFSET_CDATA);
 
         apdu.setOutgoing();
         apdu.setOutgoingLength(outCryptBuffSize);
@@ -243,15 +240,15 @@ public class CryptedBankCard extends Applet {
      */
     private void insCredit(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        short numBytes = (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
+        short numBytes = (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF);
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
         short outCryptBuffSize = 0;
-        
+
         try {
             cipherDES.init(desKey, Cipher.MODE_DECRYPT);
             outCryptBuffSize = cipherDES.doFinal(buffer, ISO7816.OFFSET_CDATA, numBytes, tmp, (short) 0);
-            
-            if((short)tmp.length > (short)0){
+
+            if ((short) tmp.length > (short) 0) {
                 byte creditAmount = tmp[0];
                 if ((creditAmount > MAX_TRANSACTION_AMOUNT) || (creditAmount < 0)) {
                     ISOException.throwIt(SW_INVALID_TRANSACTION_AMOUNT);
@@ -264,16 +261,15 @@ public class CryptedBankCard extends Applet {
                 JCSystem.beginTransaction();
                 balance = (short) (balance + creditAmount);
                 JCSystem.commitTransaction();
-            }
-            else {
+            } else {
                 ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
             }
-            
-        } catch(CryptoException ex){
+
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        } catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         } finally {
             Util.arrayFillNonAtomic(tmp, (short) 0, outCryptBuffSize, (byte) 0);
         }
@@ -286,15 +282,15 @@ public class CryptedBankCard extends Applet {
      */
     private void insDebit(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        short numBytes = (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF);
+        short numBytes = (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF);
         byte byteRead = (byte) (apdu.setIncomingAndReceive());
-        short outCryptBuffSize = 0;  
-        
+        short outCryptBuffSize = 0;
+
         try {
             cipherDES.init(desKey, Cipher.MODE_DECRYPT);
             outCryptBuffSize = cipherDES.doFinal(buffer, ISO7816.OFFSET_CDATA, numBytes, tmp, (short) 0);
 
-            if((short)tmp.length > (short)0) {
+            if ((short) tmp.length > (short) 0) {
                 byte debitAmount = tmp[0];
 
                 if ((debitAmount > MAX_TRANSACTION_AMOUNT) || (debitAmount < 0)) {
@@ -307,15 +303,14 @@ public class CryptedBankCard extends Applet {
                 JCSystem.beginTransaction();
                 balance = (short) (balance - debitAmount);
                 JCSystem.commitTransaction();
-            }
-            else {
+            } else {
                 ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
             }
-        } catch(CryptoException ex){
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        } catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         } finally {
             Util.arrayFillNonAtomic(tmp, (short) 0, outCryptBuffSize, (byte) 0);
         }
@@ -329,21 +324,20 @@ public class CryptedBankCard extends Applet {
     private void insVerification(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         short numBytes = (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF);
-        short outCryptBuffSize = 0;       
+        short outCryptBuffSize = 0;
 
-        try{
+        try {
             cipherDES.init(desKey, Cipher.MODE_DECRYPT);
             outCryptBuffSize = cipherDES.doFinal(buffer, ISO7816.OFFSET_CDATA, numBytes, tmp, (short) 0);
+        } catch (CryptoException ex) {
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
         }
-        catch(CryptoException ex){
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        }
-        
-        if((short)tmp.length <= (short)0){
+
+        if ((short) tmp.length <= (short) 0) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
-              
-        if (ownerPIN.check(tmp, (short)0, (byte) outCryptBuffSize) == false) {
+
+        if (ownerPIN.check(tmp, (short) 0, (byte) outCryptBuffSize) == false) {
             ISOException.throwIt(SW_VERIFICATION_FAILED);
         }
         Util.arrayFillNonAtomic(tmp, (short) 0, outCryptBuffSize, (byte) 0);
@@ -358,96 +352,94 @@ public class CryptedBankCard extends Applet {
     private void insSetOwnerPin(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         JCSystem.beginTransaction();
-        ownerPIN.update(buffer, ISO7816.OFFSET_CDATA, (byte)(buffer[ISO7816.OFFSET_LC]& 0x00FF));
+        ownerPIN.update(buffer, ISO7816.OFFSET_CDATA, (byte) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
         JCSystem.commitTransaction();
     }
-    
+
     /**
      * Set Modulus of public key
+     *
      * @param apdu
-     * @param lc 
+     * @param lc
      */
-    void insSetPublicModulus(APDU apdu){
+    void insSetPublicModulus(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         try {
             JCSystem.beginTransaction();
-            publicKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF));
+            publicKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
             JCSystem.commitTransaction();
-        } catch (CryptoException ex){
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        }
-        catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         }
     }
-   /**
-    * Set Modulus of private key
-    * @param apdu
-    * @param lc 
-    */
-    void insSetPrivateModulus(APDU apdu){
+
+    /**
+     * Set Modulus of private key
+     *
+     * @param apdu
+     * @param lc
+     */
+    void insSetPrivateModulus(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        try{
+        try {
             JCSystem.beginTransaction();
-            privateKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF));
+            privateKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
             JCSystem.commitTransaction();
-        }
-        catch(CryptoException ex){
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        }
-        catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         }
     }
-    
+
     /**
      * Set Exponent of private key
+     *
      * @param apdu
-     * @param lc 
+     * @param lc
      */
-    void insSetPrivateExp(APDU apdu){
+    void insSetPrivateExp(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        try{
+        try {
             JCSystem.beginTransaction();
-            privateKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF));
+            privateKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
             JCSystem.commitTransaction();
-        }
-        catch(CryptoException ex){
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        }
-        catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 + ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         }
     }
-    
+
     /**
      * Set Exponent of public key
+     *
      * @param apdu
-     * @param lc 
+     * @param lc
      */
-    void insSetPublicExp(APDU apdu){
+    void insSetPublicExp(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
-        try{
+        try {
             JCSystem.beginTransaction();
-            publicKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short)(buffer[ISO7816.OFFSET_LC]& 0x00FF));
+            publicKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
             JCSystem.commitTransaction();
-        }
-        catch(CryptoException ex){
+        } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short)(0x9100 + ex.getReason()));
-        }
-        catch(TransactionException ex){
-            ISOException.throwIt((short)(0x9200 +ex.getReason()));
+            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+        } catch (TransactionException ex) {
+            ISOException.throwIt((short) (0x9200 + ex.getReason()));
         }
     }
-    
-    void insSetIssued(){
+
+    void insSetIssued() {
         state = STATE_ISSUED;
     }
-    
+
     /**
      * Test if the Public key is initialized
      *
@@ -469,7 +461,7 @@ public class CryptedBankCard extends Applet {
             ISOException.throwIt(SW_PRIVATE_KEY_FAILED);
         }
     }
-    
+
     /**
      * Init the session Generate a random DES Key Crypt it Sign it
      *

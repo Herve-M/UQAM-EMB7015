@@ -14,6 +14,8 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 
 import javax.smartcardio.*;
 
@@ -42,23 +44,61 @@ public class APDUGenerator {
     static final byte INS_SET_PUBLIC_EXP = (byte) 0x04;
     static final byte INS_SET_OWNER_PIN = (byte) 0x05;
     static final byte INS_SET_ISSUED = (byte) 0x06;
+    static final byte INS_TEST_PUBLIC_KEY = (byte) 0x07;
+    static final byte INS_TEST_PRIVATE_KEY = (byte) 0x08;
     //ISSUED
     static final byte INS_VERIFICATION = (byte) 0x10;
     static final byte INS_CREDIT = (byte) 0x20;
     static final byte INS_DEBIT = (byte) 0x30;
     static final byte INS_BALANCE = (byte) 0x40;
+    static final byte INS_SESSION_INIT = (byte) 0x50;
+    
+    ////STATUS WORD
+    final static short SW_VERIFICATION_FAILED = 0x6300;
+    final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+    final static short SW_INVALID_TRANSACTION_AMOUNT = 0x6A83;
+    final static short SW_EXCEED_MAXIMUM_BALANCE = 0x6A84;
+    final static short SW_NEGATIVE_BALANCE = 0x6A85;
+
+    final static short SW_PULBIC_KEY_FAILED = 0x6201;
+    final static short SW_PRIVATE_KEY_FAILED = 0x6202;
+    final static short SW_SESSION_KEY_FAILED = 0x6302;
+    final static short SW_SESSION_KEY_NOT_VALID = 0x6303;
+    final static short SW_MAGIC_KEY_NOT_VALID = 0x6304;
     
     ////Crypt
     static final String ALGORITHM = "RSA";
+    static final int ALGORITHM_KEY_SIZE = 512;
     static final String TERMINAL_PUBLIC_KEY_FILE ="term-public.key";
     static final String TERMINAL_PRIVATE_KEY_FILE ="term-private.key";
     static final String CARD_PUBLIC_KEY_FILE ="card-public.key";
     static final String CARD_PRIVATE_KEY_FILE ="card-private.key";
-    RSAPublicKey rSAPublicKey;
+    
+    //KEY STORE
+    private RSAPublicKey publicKeyCard;
+    private RSAPrivateKey privateKeyCard;
+    private RSAPublicKey publicKeyTerm;
+    private RSAPrivateKey privateKeyTerm;
+    
+    //
+    Cipher cipherDES;
+    Signature signature;
+    SecretKey key;
+    
+    //DATA
+    static final byte MAGIC_VALUE = (byte) 0x5f3759df;
     
     ////OTHER
     public boolean EXIT = false;
     
+    public APDUGenerator(){
+        try {
+            signature = Signature.getInstance("SHA1withRSA");
+            cipherDES = Cipher.getInstance("DESede/ECB/PKCS5Padding");
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
 
     /**
      * Generate a Private/Public key pair
@@ -147,11 +187,40 @@ public class APDUGenerator {
      */
     public void loadKey(){
         try {
-            byte[] data = loadFile(CARD_PUBLIC_KEY_FILE);
-            X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
-            KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
-            rSAPublicKey = (RSAPublicKey) factory.generatePublic(spec);
-            
+            //Card
+            {
+                byte[] data = loadFile(CARD_PUBLIC_KEY_FILE);
+                if (data != null) {
+                    X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
+                    KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+                    publicKeyCard = (RSAPublicKey) factory.generatePublic(spec);
+                }
+            }
+            {
+                byte[] data = loadFile(CARD_PRIVATE_KEY_FILE);
+                if (data != null) {
+                    PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
+                    KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+                    privateKeyCard = (RSAPrivateKey) factory.generatePrivate(spec);
+                }
+            }
+            //Term
+            {
+                byte[] data = loadFile(TERMINAL_PUBLIC_KEY_FILE);
+                if (data != null) {
+                    X509EncodedKeySpec spec = new X509EncodedKeySpec(data);
+                    KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+                    publicKeyTerm = (RSAPublicKey) factory.generatePublic(spec);
+                }
+            }
+            {
+                byte[] data = loadFile(TERMINAL_PRIVATE_KEY_FILE);
+                if (data != null) {
+                    PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(data);
+                    KeyFactory factory = KeyFactory.getInstance(ALGORITHM);
+                    privateKeyTerm = (RSAPrivateKey) factory.generatePrivate(spec);
+                }
+            }            
         } catch (Exception ex) {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -225,6 +294,59 @@ public class APDUGenerator {
 					(byte) 0, exponent);
             System.out.println("APDU for setting Private Key Exp :");
             System.out.println(byteToStr(capdu.getBytes()));
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void testPublicKey() {
+        try {
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_TEST_PUBLIC_KEY, (byte) 0,
+                    (byte) 0);
+            System.out.println("APDU for validating Public key :");
+            System.out.println(byteToStr(capdu.getBytes()));
+
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private void testPrivateKey() {
+        try {
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_TEST_PRIVATE_KEY, (byte) 0,
+                    (byte) 0);
+            System.out.println("APDU for validating Private key :");
+            System.out.println(byteToStr(capdu.getBytes()));
+
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void setIssued() {
+        try {
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_SET_ISSUED, (byte) 0,
+                    (byte) 0);
+            System.out.println("APDU for issuing card :");
+            System.out.println(byteToStr(capdu.getBytes()));
+
+        } catch (Exception ex) {
+            Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void initializeSession() {
+        try {
+
+            CommandAPDU capdu;
+            capdu = new CommandAPDU(CLA_APPLET, INS_SESSION_INIT, (byte) 0,
+                    (byte) 0);
+            System.out.println("APDU for asking Session key :");
+            System.out.println(byteToStr(capdu.getBytes()));
+
         } catch (Exception ex) {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -324,7 +446,7 @@ public class APDUGenerator {
         byte[] cipherData = null;
         try {
             final Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, rSAPublicKey);
+            cipher.init(Cipher.ENCRYPT_MODE, publicKeyCard);
             cipherData = cipher.doFinal(data);
         } catch (Exception ex) {
             Logger.getLogger(APDUGenerator.class.getName()).log(Level.SEVERE, null, ex);
@@ -375,20 +497,29 @@ public class APDUGenerator {
                 break;
             case 4:
                 this.setOwnerPin();
-                return;
+                break;
             case 5:
+                this.testPublicKey();
+                break;
+            case 6:
+                this.testPrivateKey();
+                break;
+            case 7:
                 this.verifyPin();
                 return;
-            case 6:
-                this.getCreditApdu();
-                return;
-            case 7:
-                this.getDebitApdu();
-                return;
             case 8:
-                this.getBalanceApdu();
+                this.initializeSession();
                 return;
             case 9:
+                this.getCreditApdu();
+                return;
+            case 10:
+                this.getDebitApdu();
+                return;
+            case 11:
+                this.getBalanceApdu();
+                return;
+            case 12:
                 this.EXIT = true;
                 return;
             default:
