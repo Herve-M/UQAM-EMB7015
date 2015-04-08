@@ -267,9 +267,9 @@ public class CryptedBankCard extends Applet {
 
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         } finally {
             Util.arrayFillNonAtomic(tmp, (short) 0, outCryptBuffSize, (byte) 0);
         }
@@ -308,9 +308,9 @@ public class CryptedBankCard extends Applet {
             }
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         } finally {
             Util.arrayFillNonAtomic(tmp, (short) 0, outCryptBuffSize, (byte) 0);
         }
@@ -330,7 +330,7 @@ public class CryptedBankCard extends Applet {
             cipherDES.init(desKey, Cipher.MODE_DECRYPT);
             outCryptBuffSize = cipherDES.doFinal(buffer, ISO7816.OFFSET_CDATA, numBytes, tmp, (short) 0);
         } catch (CryptoException ex) {
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         }
 
         if ((short) tmp.length <= (short) 0) {
@@ -370,9 +370,9 @@ public class CryptedBankCard extends Applet {
             JCSystem.commitTransaction();
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         }
     }
 
@@ -390,9 +390,9 @@ public class CryptedBankCard extends Applet {
             JCSystem.commitTransaction();
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         }
     }
 
@@ -410,9 +410,9 @@ public class CryptedBankCard extends Applet {
             JCSystem.commitTransaction();
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         }
     }
 
@@ -430,9 +430,9 @@ public class CryptedBankCard extends Applet {
             JCSystem.commitTransaction();
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
-            ISOException.throwIt((short) (0x9100 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
         } catch (TransactionException ex) {
-            ISOException.throwIt((short) (0x9200 + ex.getReason()));
+            ISOException.throwIt((short) ((short)0x9200 + ex.getReason()));
         }
     }
 
