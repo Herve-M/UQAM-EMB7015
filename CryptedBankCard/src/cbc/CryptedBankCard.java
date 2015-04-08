@@ -55,10 +55,15 @@ public class CryptedBankCard extends Applet {
     final static short SW_NEGATIVE_BALANCE = 0x6A85;
 
     final static short SW_PULBIC_KEY_FAILED = 0x6201;
+    final static short SW_PULBIC_KEY_MOD_FAILED = 0x6211;
+    final static short SW_PULBIC_KEY_EXP_FAILED = 0x6212;
     final static short SW_PRIVATE_KEY_FAILED = 0x6202;
+    final static short SW_PRIVATE_KEY_MOD_FAILED = 0x6221;
+    final static short SW_PRIVATE_KEY_EXP_FAILED = 0x6222;
     final static short SW_SESSION_KEY_FAILED = 0x6302;
     final static short SW_SESSION_KEY_NOT_VALID = 0x6303;
     final static short SW_MAGIC_KEY_NOT_VALID = 0x6304;
+    final static short SW_ISSUED_FAILED = 0x6600;
 
     //DATA
     static final byte MAGIC_VALUE = (byte) 0x5f3759df;
@@ -78,6 +83,10 @@ public class CryptedBankCard extends Applet {
     Cipher cipherRSA;
     Cipher cipherDES;
     Signature signature;
+    private boolean publicKeyModulusSet = false;
+    private boolean publicKeyExponentSet = false;
+    private boolean privateKeyModulusSet = false;
+    private boolean privateKeyExponentSet = false;
 
     //BEHAVIOR
     final static short MAX_BALANCE = 0x7FFF;
@@ -365,9 +374,14 @@ public class CryptedBankCard extends Applet {
     void insSetPublicModulus(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         try {
-            JCSystem.beginTransaction();
-            publicKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
-            JCSystem.commitTransaction();
+            if(!publicKeyModulusSet){
+                JCSystem.beginTransaction();
+                publicKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
+                JCSystem.commitTransaction();
+                publicKeyModulusSet = true;
+            } else {
+                ISOException.throwIt((short) SW_PULBIC_KEY_MOD_FAILED);
+            }
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
             ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
@@ -385,9 +399,14 @@ public class CryptedBankCard extends Applet {
     void insSetPrivateModulus(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         try {
-            JCSystem.beginTransaction();
-            privateKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
-            JCSystem.commitTransaction();
+            if(!privateKeyModulusSet){
+                JCSystem.beginTransaction();
+                privateKey.setModulus(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
+                JCSystem.commitTransaction();
+                privateKeyModulusSet = true;
+            } else {
+                ISOException.throwIt((short) SW_PRIVATE_KEY_MOD_FAILED);
+            }            
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
             ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
@@ -405,9 +424,14 @@ public class CryptedBankCard extends Applet {
     void insSetPrivateExp(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         try {
-            JCSystem.beginTransaction();
-            privateKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
-            JCSystem.commitTransaction();
+            if(!privateKeyExponentSet){
+                JCSystem.beginTransaction();
+                privateKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
+                JCSystem.commitTransaction();
+                privateKeyExponentSet = true;
+            } else {
+                ISOException.throwIt((short) SW_PRIVATE_KEY_EXP_FAILED);
+            }            
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
             ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
@@ -425,9 +449,14 @@ public class CryptedBankCard extends Applet {
     void insSetPublicExp(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         try {
-            JCSystem.beginTransaction();
-            publicKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
-            JCSystem.commitTransaction();
+            if(!publicKeyExponentSet){
+                JCSystem.beginTransaction();
+                publicKey.setExponent(buffer, ISO7816.OFFSET_CDATA, (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF));
+                JCSystem.commitTransaction();
+                publicKeyExponentSet = true;
+            } else {
+                ISOException.throwIt((short) SW_PULBIC_KEY_EXP_FAILED);
+            }            
         } catch (CryptoException ex) {
             JCSystem.abortTransaction();
             ISOException.throwIt((short) ((short)0x9100 + ex.getReason()));
@@ -437,7 +466,15 @@ public class CryptedBankCard extends Applet {
     }
 
     void insSetIssued() {
-        state = STATE_ISSUED;
+        if(publicKeyExponentSet && 
+                privateKeyExponentSet &&
+                privateKeyModulusSet &&
+                publicKeyModulusSet
+                ){
+            state = STATE_ISSUED;
+        } else {
+            ISOException.throwIt((short) SW_ISSUED_FAILED);
+        }            
     }
 
     /**
