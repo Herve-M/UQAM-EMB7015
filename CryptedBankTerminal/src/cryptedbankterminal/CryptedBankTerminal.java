@@ -290,7 +290,7 @@ public class CryptedBankTerminal {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_TEST_PUBLIC_KEY, (byte) 0,
                     (byte) 0);
-            System.out.println("APDU for validating Public key sended.");
+            System.out.println("APDU for validating Public key sent.");
             this.sendCommand(capdu, 36864);
 
         } catch (Exception ex) {
@@ -303,7 +303,7 @@ public class CryptedBankTerminal {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_TEST_PRIVATE_KEY, (byte) 0,
                     (byte) 0);
-            System.out.println("APDU for validating Private key sended.");
+            System.out.println("APDU for validating Private key sent.");
             this.sendCommand(capdu, 36864);
 
         } catch (Exception ex) {
@@ -370,7 +370,7 @@ public class CryptedBankTerminal {
             CommandAPDU capdu;
             capdu = new CommandAPDU(CLA_APPLET, INS_SESSION_INIT, (byte) 0,
                     (byte) 0);
-            System.out.println("APDU for asking Session key sended.");
+            System.out.println("APDU for asking Session key sent.");
             this.sendCommand(capdu, 36864);
 
         } catch (Exception ex) {
